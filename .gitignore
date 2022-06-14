@@ -8,6 +8,7 @@ notes.txt
 *.png
 *.zip
 node_modules
+*node_modules
 # OS generated files #
 ######################
 .DS_Store

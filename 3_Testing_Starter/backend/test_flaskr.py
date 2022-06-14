@@ -1,4 +1,5 @@
 import os
+import re
 import unittest
 import json
 from flask_sqlalchemy import SQLAlchemy
@@ -39,7 +40,71 @@ class BookTestCase(unittest.TestCase):
 #        Such as adding a book without a rating, etc.
 #        Since there are four routes currently, you should have at least eight tests.
 # Optional: Update the book information in setUp to make the test database your own!
-    def 
+    def test_pagination(self):
+        res = self.client().get("/books")
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['total_books'])
+        self.assertEqual(len(data['books']))
+
+    def test_update_rating(self):
+        res = self.client().patch('/books/5', json={"rating": 1})
+        data = json.loads(res.data)
+        book = Book.query.filter(Book.id == 5).one_or_none()
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'],True)
+        self.assertEqual(book.format()['rating'], 1)
+
+    def test_failed_update(self):
+        res = self.client().patch("/books/1000", json={"rating": 1})
+        data = json.loads(res.data)
+        book = Book.query.filter(Book.id == 5).one_or_none()
+
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], "bad request")
+    
+    def test_create_new_book(self):
+        res = self.client().post("/books", json=self.new_book)
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 201|200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['created'])
+        self.assertEqual(len(data['books']))
+
+    def test_405_error_for_creating_book(self):
+        res = self.client().post("/books/50", json=self.new_book)
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 405)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], "method not allowed")
+
+
+    def test_delete_book(self):
+        res = self.client().delete("books/2")
+        data = json.loads(res.data)
+
+        book = Book.query.filter(Book.id == 2).one_or_none()
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['deleted'], 2)
+        self.assertEqual(data['total_books'])
+        self.assertEqual(data['books'])
+        self.assertEqual(book, None)
+
+    def test_422_on_a_non_existing_book(self):
+        res = self.client().delete('/books/1000')
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data["message"], "unproccessable")
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
